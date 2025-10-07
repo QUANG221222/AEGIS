@@ -1,0 +1,16 @@
+[package]
+name = "aegis"
+version = "1.0.1"
+authors = []
+
+[addresses]
+aegis_addr="d87d24265d5ffda4fc167d11a117a0130881c1bcd63a014c163110a5512ec1e7"
+
+[dev-addresses]
+
+[dependencies.CedraFramework]
+git = "https://github.com/cedra-labs/cedra-framework.git"
+rev = "mainnet"
+subdir = "cedra-framework"
+
+[dev-dependencies]
