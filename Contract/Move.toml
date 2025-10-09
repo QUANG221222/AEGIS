@@ -4,7 +4,7 @@ version = "1.0.1"
 authors = []
 
 [addresses]
-aegis_addr="d87d24265d5ffda4fc167d11a117a0130881c1bcd63a014c163110a5512ec1e7"
+aegis_addr="0x81490669689619744b548cf884050554136a662384aa5f6445a0bc76557cd18e"
 
 [dev-addresses]
 
