@@ -1,0 +1,41 @@
+{
+  "name": "aegis-cedra-backend-oracle",
+  "version": "1.0.0",
+  "description": "Backend with Cedra SDK and Oracle auto-update",
+  "main": "dist/src/app.js",
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development ts-node-dev --respawn --transpile-only src/app.ts",
+    "build": "tsc",
+    "start": "node dist/src/app.js",
+    "oracle": "cross-env NODE_ENV=development node dist/src/oracle/scheduler.js",
+    "prod": "cross-env NODE_ENV=production npm run build && npm run start",
+    "oracle:prod": "cross-env NODE_ENV=production npm run build && npm run oracle",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@cedra-labs/ts-sdk": "^2.2.5",
+    "axios": "^1.7.3",
+    "cross-env": "^10.1.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.30",
+    "@types/node-cron": "^3.0.10",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5"
+  },
+  "keywords": [
+    "aegis",
+    "cedra",
+    "move",
+    "oracle",
+    "blockchain",
+    "typescript"
+  ],
+  "author": "JimmyDev",
+  "license": "MIT"
+}
