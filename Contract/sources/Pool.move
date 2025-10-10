@@ -17,6 +17,8 @@ module aegis_addr::pool {
     friend aegis_addr::withdraw;
     friend aegis_addr::borrowing;
     friend aegis_addr::collateral; 
+    friend aegis_addr::interest_payment;
+    friend aegis_addr::interest_repayment; 
     
     // === Structs ===
     
@@ -44,6 +46,18 @@ module aegis_addr::pool {
         /// Total tokens currently borrowed from this pool
         /// This should always be <= total_supply
         total_borrowed: u64,
+        
+        /// Total interest accumulated in the pool
+        total_interest: u64,
+        
+        /// Annual Percentage Yield (APY) for this pool
+        apy: u64,
+        
+        /// Timestamp of last update
+        last_update: u64,
+        
+        /// Pool address for transfers
+        address: address,
     }
 
     /// # Borrow Position Resource
@@ -94,12 +108,19 @@ module aegis_addr::pool {
     /// ```
 
     public entry fun init_pool<Currency>(account: &signer) {
-
+        use cedra_framework::timestamp;
+        
+        let admin_addr = signer::address_of(account);
+        
         // Create a new pool with initial values
         let new_pool = Pool<Currency> {
-            admin: signer::address_of(account),
+            admin: admin_addr,
             total_supply: 0,
             total_borrowed: 0,
+            total_interest: 0,
+            apy: 500000, // Default 5% APY (500000 / 10000000 = 0.05)
+            last_update: timestamp::now_seconds(),
+            address: admin_addr,
         };
         
         // Publish the pool resource under the account's address
@@ -252,5 +273,49 @@ module aegis_addr::pool {
         
         let pos = borrow_global<BorrowPosition<Currency>>(borrower_addr);
         (pos.pool, pos.amount, pos.last_update)
+    }
+
+    // === Interest Management Functions ===
+
+    /// Get total interest from pool (friend only)
+    public(friend) fun get_total_interest<Currency>(pool_address: address): u64 acquires Pool {
+        let pool = borrow_global<Pool<Currency>>(pool_address);
+        pool.total_interest
+    }
+
+    /// Get APY from pool (friend only)
+    public(friend) fun get_apy<Currency>(pool_address: address): u64 acquires Pool {
+        let pool = borrow_global<Pool<Currency>>(pool_address);
+        pool.apy
+    }
+
+    /// Get last update timestamp from pool (friend only)
+    public(friend) fun get_last_update<Currency>(pool_address: address): u64 acquires Pool {
+        let pool = borrow_global<Pool<Currency>>(pool_address);
+        pool.last_update
+    }
+
+    /// Get pool address (friend only)
+    public(friend) fun get_pool_address<Currency>(pool_address: address): address acquires Pool {
+        let pool = borrow_global<Pool<Currency>>(pool_address);
+        pool.address
+    }
+
+    /// Update total interest (friend only)
+    public(friend) fun update_total_interest<Currency>(pool_address: address, new_interest: u64) acquires Pool {
+        let pool = borrow_global_mut<Pool<Currency>>(pool_address);
+        pool.total_interest = new_interest;
+    }
+
+    /// Update last update timestamp (friend only)
+    public(friend) fun update_last_update<Currency>(pool_address: address, timestamp: u64) acquires Pool {
+        let pool = borrow_global_mut<Pool<Currency>>(pool_address);
+        pool.last_update = timestamp;
+    }
+
+    /// Update APY (friend only)
+    public(friend) fun update_apy<Currency>(pool_address: address, new_apy: u64) acquires Pool {
+        let pool = borrow_global_mut<Pool<Currency>>(pool_address);
+        pool.apy = new_apy;
     }
 }
