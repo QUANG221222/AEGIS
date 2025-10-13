@@ -1,16 +1,18 @@
-/// # Pool Module
-/// 
-/// This module implements a basic lending pool structure that can manage
-/// different types of currencies/tokens. It tracks the total supply of tokens
-/// in the pool and the total amount borrowed from the pool.
-/// 
-/// This is a minimal implementation that focuses on the core data structure
-/// without implementing deposit, withdrawal, borrowing, or interest calculation
-/// functionality yet.
+// # Pool Module
+// 
+// This module implements a basic lending pool structure that can manage
+// different types of currencies/tokens. It tracks the total supply of tokens
+// in the pool and the total amount borrowed from the pool.
+// 
+// This is a minimal implementation that focuses on the core data structure
+// without implementing deposit, withdrawal, borrowing, or interest calculation
+// functionality yet.
 
 module aegis_addr::pool {
     use std::signer;
-    use std::error; 
+    use std::error;
+    use cedra_framework::coin::{Self, Coin};
+    use cedra_framework::table::{Self, Table};
     
     friend aegis_addr::lending;
     friend aegis_addr::pool_manager;
@@ -22,57 +24,64 @@ module aegis_addr::pool {
     
     // === Structs ===
     
-    /// # Pool Resource
-    /// 
-    /// A generic pool that can hold any type of currency/token.
-    /// The pool tracks two key metrics:
-    /// - total_supply: The total amount of tokens available in the pool
-    /// - total_borrowed: The total amount of tokens currently borrowed from the pool
-    /// 
-    /// The `has key` ability allows this struct to be stored as a resource
-    /// under an account's address, making it globally accessible and owned
-    /// by the account that publishes it.
-    /// 
-    /// Generic type parameter `Currency` allows the same pool logic to work
-    /// with different token types (e.g., USDT, USDC, ETH, etc.)
+    // # Pool Resource
+    // 
+    // A generic pool that can hold any type of currency/token.
+    // The pool tracks two key metrics:
+    // - total_supply: The total amount of tokens available in the pool
+    // - total_borrowed: The total amount of tokens currently borrowed from the pool
+    // 
+    // The `has key` ability allows this struct to be stored as a resource
+    // under an account's address, making it globally accessible and owned
+    // by the account that publishes it.
+    // 
+    // Generic type parameter `Currency` allows the same pool logic to work
+    // with different token types (e.g., USDT, USDC, ETH, etc.)
     struct Pool<phantom Currency> has key {
-        /// Address of the pool administrator
+        // Address of the pool administrator
         admin: address,
 
-        /// Total tokens managed by this pool
-        /// This represents the liquidity available for borrowing
+        // Store actual coins instead of just tracking numbers
+        coins: Coin<Currency>,
+
+        // Total tokens currently borrowed from this pool
+        // This should always be <= total_supply
+        total_borrowed: u64,
+
         total_supply: u64,
         
-        /// Total tokens currently borrowed from this pool
-        /// This should always be <= total_supply
-        total_borrowed: u64,
-        
-        /// Total interest accumulated in the pool
+        // Total interest accumulated in the pool
         total_interest: u64,
         
-        /// Annual Percentage Yield (APY) for this pool
+        // Annual Percentage Yield (APY) for this pool
         apy: u64,
         
-        /// Timestamp of last update
+        // Timestamp of last update
         last_update: u64,
         
-        /// Pool address for transfers
+        // Pool address for transfers
         address: address,
     }
 
-    /// # Borrow Position Resource
-    /// 
-    /// Tracks individual user's borrowing position for a specific currency.
-    /// Each user can have one borrow position per currency type.
+    // # Borrow Position Resource
+    // 
+    // Tracks individual user's borrowing position for a specific currency.
+    // Each user can have one borrow position per currency type.
     struct BorrowPosition<phantom Currency> has key {
-        /// The pool from which this debt was borrowed
+        // The pool from which this debt was borrowed
         pool: address,
         
-        /// Amount currently borrowed by this user
+        // Amount currently borrowed by this user
         amount: u64,
         
-        /// Timestamp when the position was last updated
+        // Timestamp when the position was last updated
         last_update: u64,
+    }
+    
+    // Track individual user deposits in a pool
+    struct UserDeposits<phantom Currency> has key {
+        // Table mapping user address to their deposit amount
+        deposits: Table<address, u64>,
     }
 
     // === Error Codes ===
@@ -81,40 +90,44 @@ module aegis_addr::pool {
     const E_INSUFFICIENT_BORROWED: u64 = 3;
     const E_POOL_NOT_EXISTS: u64 = 4;
 
-    /// # Initialize Pool
-    /// 
-    /// Creates a new pool resource and publishes it under the signer's account.
-    /// This function can only be called once per account per currency type.
-    /// 
-    /// ## Parameters
-    /// - `account`: The signer who will own and control this pool
-    /// 
-    /// ## Behavior
-    /// - Creates a new Pool<Currency> with zero supply and zero borrowed amount
-    /// - Publishes the pool resource under the account's address
-    /// - After calling this function, the pool exists but contains no tokens
-    /// 
-    /// ## Aborts
-    /// - If a pool of the same currency type already exists under this account
-    /// - If the account doesn't have permission to publish resources
-    /// 
-    /// ## Example Usage
-    /// ```
-    /// // Initialize a USDT pool
-    /// init_pool<USDT>(&account);
-    /// 
-    /// // Initialize a different currency pool under the same account
-    /// init_pool<USDC>(&account);
-    /// ```
+    // # Initialize Pool
+    // 
+    // Creates a new pool resource and publishes it under the signer's account.
+    // This function can only be called once per account per currency type.
+    // 
+    // ## Parameters
+    // - `account`: The signer who will own and control this pool
+    // 
+    // ## Behavior
+    // - Creates a new Pool<Currency> with zero supply and zero borrowed amount
+    // - Publishes the pool resource under the account's address
+    // - After calling this function, the pool exists but contains no tokens
+    // 
+    // ## Aborts
+    // - If a pool of the same currency type already exists under this account
+    // - If the account doesn't have permission to publish resources
+    // 
+    // ## Example Usage
+    // ```
+    // // Initialize a USDT pool
+    // init_pool<USDT>(&account);
+    // 
+    // // Initialize a different currency pool under the same account
+    // init_pool<USDC>(&account);
+    // ```
 
     public entry fun init_pool<Currency>(account: &signer) {
         use cedra_framework::timestamp;
         
         let admin_addr = signer::address_of(account);
         
+        // Create empty coin balance
+        let empty_coins = coin::zero<Currency>();
+        
         // Create a new pool with initial values
         let new_pool = Pool<Currency> {
             admin: admin_addr,
+            coins: empty_coins,
             total_supply: 0,
             total_borrowed: 0,
             total_interest: 0,
@@ -122,43 +135,69 @@ module aegis_addr::pool {
             last_update: timestamp::now_seconds(),
             address: admin_addr,
         };
+
+        // Create user deposits tracking
+        let user_deposits = UserDeposits<Currency> {
+            deposits: table::new(),
+        };
         
         // Publish the pool resource under the account's address
         // This makes the pool globally accessible at this address
         move_to(account, new_pool);
+        move_to(account, user_deposits);
     }
+
+    // Deposit actual coins to pool
+    public(friend) fun deposit_coins<Currency>(
+        pool_address: address,
+        coins: Coin<Currency>
+    ) acquires Pool {
+        let pool = borrow_global_mut<Pool<Currency>>(pool_address);
+        coin::merge(&mut pool.coins, coins);
+    }
+    
+    // Withdraw coins from pool
+    public(friend) fun withdraw_coins<Currency>(
+        pool_address: address,
+        amount: u64
+    ): Coin<Currency> acquires Pool {
+        let pool = borrow_global_mut<Pool<Currency>>(pool_address);
+        coin::extract(&mut pool.coins, amount)
+    }
+    
 
     // === View Functions ===
     // These functions will be useful for querying pool state in the future
 
-    /// Check if a pool exists for the given currency type at the specified address
+    // Get total supply (actual coin balance)
+    #[view]
+    public fun get_total_supply<Currency>(pool_address: address): u64 acquires Pool {
+        let pool = borrow_global<Pool<Currency>>(pool_address);
+        coin::value(&pool.coins)
+    }
+
+    // Check if a pool exists for the given currency type at the specified address
     #[view]
     public fun pool_exists<Currency>(pool_address: address): bool {
         exists<Pool<Currency>>(pool_address)
     }
 
-    /// Get the total supply of a pool (read-only access)
-    #[view]
-    public fun get_total_supply<Currency>(pool_address: address): u64 acquires Pool {
-        let pool = borrow_global<Pool<Currency>>(pool_address);
-        pool.total_supply
-    }
-
-    /// Get the total borrowed amount of a pool (read-only access)  
+    // Get the total borrowed amount of a pool (read-only access)  
     #[view]
     public fun get_total_borrowed<Currency>(pool_address: address): u64 acquires Pool {
         let pool = borrow_global<Pool<Currency>>(pool_address);
         pool.total_borrowed
     }
 
-    /// Get both total supply and total borrowed in one call
+    // Get pool stats (for backward compatibility)
     #[view]
     public fun get_pool_stats<Currency>(pool_address: address): (u64, u64) acquires Pool {
+        assert!(exists<Pool<Currency>>(pool_address), error::not_found(E_POOL_NOT_EXISTS));
         let pool = borrow_global<Pool<Currency>>(pool_address);
-        (pool.total_supply, pool.total_borrowed)
+        (coin::value(&pool.coins), pool.total_borrowed)
     }
 
-    /// Get the amount borrowed by a specific user
+    // Get the amount borrowed by a specific user
     #[view]
     public fun get_user_borrowed<Currency>(pool_address: address, borrower_addr: address): u64 acquires BorrowPosition {
         if (!exists<BorrowPosition<Currency>>(borrower_addr)) {
@@ -171,7 +210,7 @@ module aegis_addr::pool {
         pos.amount
     }
 
-    /// Repay debt for a user (used in liquidation)
+    // Repay debt for a user (used in liquidation)
     public(friend) fun repay_for_user<Currency>(
         pool_address: address,
         borrower_addr: address,
@@ -193,22 +232,22 @@ module aegis_addr::pool {
         pool.total_borrowed = pool.total_borrowed - repay_amount;
     }
 
-    /// Update the total supply of a pool (for deposit/withdraw operations)
-    /// Only callable by friend modules for security
+    // Update the total supply of a pool (for deposit/withdraw operations)
+    // Only callable by friend modules for security
     public(friend) fun update_total_supply<Currency>(pool_address: address, new_supply: u64) acquires Pool {
         let pool = borrow_global_mut<Pool<Currency>>(pool_address);
         pool.total_supply = new_supply;
     }
 
-    /// Update the total borrowed amount of a pool (for borrow/repay operations)  
-    /// Only callable by friend modules for security
+    // Update the total borrowed amount of a pool (for borrow/repay operations)  
+    // Only callable by friend modules for security
     public(friend) fun update_total_borrowed<Currency>(pool_address: address, new_borrowed: u64) acquires Pool {
         let pool = borrow_global_mut<Pool<Currency>>(pool_address);
         pool.total_borrowed = new_borrowed;
     }
 
-    /// Update both total supply and borrowed amounts in one call
-    /// Only callable by friend modules for security
+    // Update both total supply and borrowed amounts in one call
+    // Only callable by friend modules for security
     public(friend) fun update_pool_state<Currency>(
         pool_address: address, 
         new_supply: u64, 
@@ -219,9 +258,90 @@ module aegis_addr::pool {
         pool.total_borrowed = new_borrowed;
     }
 
+    // === User Deposit Functions ===
+    // Initialize user deposits tracking for a pool
+    public(friend) fun init_user_deposits<Currency>(account: &signer) {
+        let user_deposits = UserDeposits<Currency> {
+            deposits: table::new(),
+        };
+        move_to(account, user_deposits);
+    }
+    
+    // Update user deposit amount
+    public(friend) fun update_user_deposit<Currency>(
+        pool_address: address,
+        user: address,
+        amount: u64,
+        is_deposit: bool, // true for deposit, false for withdraw
+    ) acquires UserDeposits {
+        // Check if UserDeposits exists, if not create it
+        if (!exists<UserDeposits<Currency>>(pool_address)) {
+            // Need to get the account at pool_address to create UserDeposits
+            // This requires the pool_address to be a valid signer or have permission
+            // For now, we'll assume it exists or handle this at the caller level
+            abort error::not_found(E_POOL_NOT_EXISTS)
+        };
+        
+        let user_deposits = borrow_global_mut<UserDeposits<Currency>>(pool_address);
+        
+        if (table::contains(&user_deposits.deposits, user)) {
+            let current_amount = *table::borrow(&user_deposits.deposits, user);
+            let new_amount = if (is_deposit) {
+                current_amount + amount
+            } else {
+                if (current_amount >= amount) {
+                    current_amount - amount
+                } else {
+                    0
+                }
+            };
+            table::upsert(&mut user_deposits.deposits, user, new_amount);
+        } else if (is_deposit) {
+            table::add(&mut user_deposits.deposits, user, amount);
+        }
+    }
+    
+    // Get user's deposit amount
+    #[view]
+    public fun get_user_deposit<Currency>(
+        pool_address: address,
+        user: address
+    ): u64 acquires UserDeposits {
+        if (!exists<UserDeposits<Currency>>(pool_address)) {
+            return 0
+        };
+        
+        let user_deposits = borrow_global<UserDeposits<Currency>>(pool_address);
+        if (table::contains(&user_deposits.deposits, user)) {
+            *table::borrow(&user_deposits.deposits, user)
+        } else {
+            0
+        }
+    }
+
+    // Check if UserDeposits exists for a pool
+    #[view]
+    public fun user_deposits_exists<Currency>(pool_address: address): bool {
+        exists<UserDeposits<Currency>>(pool_address)
+    }
+
+    // Check if a specific user has deposits in a pool
+    #[view]
+    public fun user_has_deposits<Currency>(
+        pool_address: address,
+        user: address
+    ): bool acquires UserDeposits {
+        if (!exists<UserDeposits<Currency>>(pool_address)) {
+            return false
+        };
+        
+        let user_deposits = borrow_global<UserDeposits<Currency>>(pool_address);
+        table::contains(&user_deposits.deposits, user)
+    }
+
     // === Borrow Position Functions ===
 
-    /// Initialize a borrow position for a user
+    // Initialize a borrow position for a user
     public(friend) fun init_borrow_position<Currency>(
         borrower: &signer,
         pool_address: address,
@@ -243,7 +363,7 @@ module aegis_addr::pool {
         move_to(borrower, position);
     }
 
-    /// Update an existing borrow position
+    // Update an existing borrow position
     public(friend) fun update_borrow_position<Currency>(
         borrower_addr: address,
         pool_address: address,
@@ -260,13 +380,13 @@ module aegis_addr::pool {
         pos.last_update = timestamp::now_seconds();
     }
 
-    /// Check if a user has a borrow position for a specific currency
+    // Check if a user has a borrow position for a specific currency
     #[view]
     public fun has_borrow_position<Currency>(borrower_addr: address): bool {
         exists<BorrowPosition<Currency>>(borrower_addr)
     }
 
-    /// Get borrow position details
+    // Get borrow position details
     #[view]
     public fun get_borrow_position<Currency>(borrower_addr: address): (address, u64, u64) acquires BorrowPosition {
         assert!(exists<BorrowPosition<Currency>>(borrower_addr), error::not_found(E_BORROW_POSITION_NOT_EXISTS));
@@ -277,43 +397,43 @@ module aegis_addr::pool {
 
     // === Interest Management Functions ===
 
-    /// Get total interest from pool (friend only)
+    // Get total interest from pool (friend only)
     public(friend) fun get_total_interest<Currency>(pool_address: address): u64 acquires Pool {
         let pool = borrow_global<Pool<Currency>>(pool_address);
         pool.total_interest
     }
 
-    /// Get APY from pool (friend only)
+    // Get APY from pool (friend only)
     public(friend) fun get_apy<Currency>(pool_address: address): u64 acquires Pool {
         let pool = borrow_global<Pool<Currency>>(pool_address);
         pool.apy
     }
 
-    /// Get last update timestamp from pool (friend only)
+    // Get last update timestamp from pool (friend only)
     public(friend) fun get_last_update<Currency>(pool_address: address): u64 acquires Pool {
         let pool = borrow_global<Pool<Currency>>(pool_address);
         pool.last_update
     }
 
-    /// Get pool address (friend only)
+    // Get pool address (friend only)
     public(friend) fun get_pool_address<Currency>(pool_address: address): address acquires Pool {
         let pool = borrow_global<Pool<Currency>>(pool_address);
         pool.address
     }
 
-    /// Update total interest (friend only)
+    // Update total interest (friend only)
     public(friend) fun update_total_interest<Currency>(pool_address: address, new_interest: u64) acquires Pool {
         let pool = borrow_global_mut<Pool<Currency>>(pool_address);
         pool.total_interest = new_interest;
     }
 
-    /// Update last update timestamp (friend only)
+    // Update last update timestamp (friend only)
     public(friend) fun update_last_update<Currency>(pool_address: address, timestamp: u64) acquires Pool {
         let pool = borrow_global_mut<Pool<Currency>>(pool_address);
         pool.last_update = timestamp;
     }
 
-    /// Update APY (friend only)
+    // Update APY (friend only)
     public(friend) fun update_apy<Currency>(pool_address: address, new_apy: u64) acquires Pool {
         let pool = borrow_global_mut<Pool<Currency>>(pool_address);
         pool.apy = new_apy;

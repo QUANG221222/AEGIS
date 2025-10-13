@@ -1,5 +1,5 @@
-/// Oracle Module - Simple Price Feed for USDT Conversion
-/// Provides basic price feeds to convert any asset to USDT value
+// Oracle Module - Simple Price Feed for USDT Conversion
+// Provides basic price feeds to convert any asset to USDT value
 
 module aegis_addr::oracle {
     use std::error;
@@ -18,7 +18,7 @@ module aegis_addr::oracle {
     }
 
     // === Structs ===
-    /// Price feed for a currency type (price in USDT)
+    // Price feed for a currency type (price in USDT)
     struct PriceFeed<phantom Currency> has key {
         price: u64,           // Price in USDT with 8 decimals (e.g., 300000000000 = $3000.00)
         admin: address,       // Who can update this price
@@ -36,7 +36,7 @@ module aegis_addr::oracle {
 
     // === Admin Functions ===
     
-    /// Initialize price feed for a currency type
+    // Initialize price feed for a currency type
     public entry fun init_price_feed<Currency>(
         admin: &signer,
         initial_price: u64,  // Price in USDT (8 decimals)
@@ -55,7 +55,7 @@ module aegis_addr::oracle {
         move_to(admin, price_feed);
     }
     
-    /// Update price for a currency type
+    // Update price for a currency type
     public entry fun update_price<Currency>(
         admin: &signer,
         new_price: u64,
@@ -85,7 +85,7 @@ module aegis_addr::oracle {
 
     // === View Functions ===
     
-    /// Get current price in USDT for a currency type
+    // Get current price in USDT for a currency type
     #[view]
     public fun get_price_usdt<Currency>(oracle_address: address): u64 acquires PriceFeed {
         assert!(exists<PriceFeed<Currency>>(oracle_address), error::not_found(E_PRICE_NOT_EXISTS));
@@ -93,8 +93,8 @@ module aegis_addr::oracle {
         price_feed.price
     }
     
-    /// Convert currency amount to USDT value
-    /// Example: 1 ETH (100000000) * $3000 price = $3000 USDT (300000000000)
+    // Convert currency amount to USDT value
+    // Example: 1 ETH (100000000) * $3000 price = $3000 USDT (300000000000)
     #[view]
     public fun convert_to_usdt<Currency>(
         oracle_address: address,
@@ -104,8 +104,8 @@ module aegis_addr::oracle {
         (currency_amount * price) / 100000000  // Adjust for 8 decimal places
     }
     
-    /// Convert USDT amount to currency amount  
-    /// Example: $3000 USDT (300000000000) / $3000 price = 1 ETH (100000000)
+    // Convert USDT amount to currency amount  
+    // Example: $3000 USDT (300000000000) / $3000 price = 1 ETH (100000000)
     #[view]
     public fun convert_from_usdt<Currency>(
         oracle_address: address,
@@ -115,13 +115,13 @@ module aegis_addr::oracle {
         (usdt_amount * 100000000) / price  // Adjust for 8 decimal places
     }
     
-    /// Check if price feed exists for a currency
+    // Check if price feed exists for a currency
     #[view]
     public fun price_exists<Currency>(oracle_address: address): bool {
         exists<PriceFeed<Currency>>(oracle_address)
     }
 
-    /// Get the timestamp of last price update
+    // Get the timestamp of last price update
     #[view]
     public fun get_last_updated<Currency>(oracle_address: address): u64 acquires PriceFeed {
         assert!(exists<PriceFeed<Currency>>(oracle_address), error::not_found(E_PRICE_NOT_EXISTS));
@@ -129,7 +129,7 @@ module aegis_addr::oracle {
         price_feed.last_updated
     }
 
-    /// Get price and last update timestamp
+    // Get price and last update timestamp
     #[view]
     public fun get_price_with_timestamp<Currency>(oracle_address: address): (u64, u64) acquires PriceFeed {
         assert!(exists<PriceFeed<Currency>>(oracle_address), error::not_found(E_PRICE_NOT_EXISTS));
@@ -137,7 +137,7 @@ module aegis_addr::oracle {
         (price_feed.price, price_feed.last_updated)
     }
 
-    /// Check if price is fresh (updated within threshold time)
+    // Check if price is fresh (updated within threshold time)
     #[view]
     public fun is_price_fresh<Currency>(oracle_address: address): bool acquires PriceFeed {
         if (!exists<PriceFeed<Currency>>(oracle_address)) {
@@ -151,7 +151,7 @@ module aegis_addr::oracle {
         time_diff <= PRICE_FRESHNESS_THRESHOLD
     }
 
-    /// Get time since last update in seconds
+    // Get time since last update in seconds
     #[view]
     public fun get_time_since_update<Currency>(oracle_address: address): u64 acquires PriceFeed {
         assert!(exists<PriceFeed<Currency>>(oracle_address), error::not_found(E_PRICE_NOT_EXISTS));
@@ -160,7 +160,7 @@ module aegis_addr::oracle {
         current_time - price_feed.last_updated
     }
 
-    /// Get price only if it's fresh, otherwise throw error
+    // Get price only if it's fresh, otherwise throw error
     #[view]
     public fun get_fresh_price<Currency>(oracle_address: address): u64 acquires PriceFeed {
         assert!(is_price_fresh<Currency>(oracle_address), error::invalid_state(E_STALE_PRICE));
