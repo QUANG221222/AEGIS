@@ -1,15 +1,15 @@
-/// # Collateral Module
-/// 
-/// This module manages collateral deposits for the lending protocol.
-/// Users can deposit collateral to secure their borrowing positions,
-/// and the system can liquidate collateral when health factors drop below safe levels.
-///
-/// Key Features:
-/// - Deposit collateral assets
-/// - Withdraw collateral (if health factor remains safe)
-/// - Liquidate under-collateralized positions
-/// - Calculate collateral value and health factors
-/// - Support multiple collateral asset types
+// # Collateral Module
+// 
+// This module manages collateral deposits for the lending protocol.
+// Users can deposit collateral to secure their borrowing positions,
+// and the system can liquidate collateral when health factors drop below safe levels.
+//
+// Key Features:
+// - Deposit collateral assets
+// - Withdraw collateral (if health factor remains safe)
+// - Liquidate under-collateralized positions
+// - Calculate collateral value and health factors
+// - Support multiple collateral asset types
 
 module aegis_addr::collateral {
     use std::error;
@@ -18,11 +18,10 @@ module aegis_addr::collateral {
     use cedra_framework::timestamp;
     use cedra_framework::coin;  // Add this import for coin operations
     use aegis_addr::oracle;
-    use aegis_addr::pool;
 
     // === Vault for storing collateral coins ===
     
-    /// Vault to store actual collateral coins
+    // Vault to store actual collateral coins
     struct CollateralVault<phantom Currency> has key {
         coins: coin::Coin<Currency>,
         admin: address,
@@ -30,7 +29,7 @@ module aegis_addr::collateral {
 
     // === Events ===
     
-    /// Event emitted when collateral is deposited
+    // Event emitted when collateral is deposited
     #[event]
     struct CollateralDepositEvent has drop, store {
         user: address,
@@ -40,7 +39,7 @@ module aegis_addr::collateral {
         timestamp: u64,
     }
 
-    /// Event emitted when collateral is withdrawn
+    // Event emitted when collateral is withdrawn
     #[event]
     struct CollateralWithdrawEvent has drop, store {
         user: address,
@@ -50,7 +49,7 @@ module aegis_addr::collateral {
         timestamp: u64,
     }
 
-    /// Event emitted when liquidation occurs
+    // Event emitted when liquidation occurs
     #[event]
     struct LiquidationEvent has drop, store {
         liquidator: address,
@@ -64,37 +63,37 @@ module aegis_addr::collateral {
 
     // === Structs ===
 
-    /// User's collateral account holding multiple types of collateral
+    // User's collateral account holding multiple types of collateral
     struct CollateralAccount has key {
-        /// Map of collateral type -> amount deposited
-        /// We'll use a simple approach with individual fields for different types
-        /// In a more advanced implementation, this could use a Table or SimpleMap
+        // Map of collateral type -> amount deposited
+        // We'll use a simple approach with individual fields for different types
+        // In a more advanced implementation, this could use a Table or SimpleMap
         owner: address,
     }
 
-    /// Individual collateral position for a specific asset type
+    // Individual collateral position for a specific asset type
     struct CollateralPosition<phantom Currency> has key {
         owner: address,
         amount: u64,
         last_update: u64,
     }
 
-    /// Collateral configuration for an asset type
+    // Collateral configuration for an asset type
     struct CollateralConfig<phantom Currency> has key {
         admin: address,
-        /// Loan-to-Value ratio (e.g., 75% = 7500)
+        // Loan-to-Value ratio (e.g., 75% = 7500)
         ltv_ratio: u64,
-        /// Liquidation threshold (e.g., 80% = 8000)
+        // Liquidation threshold (e.g., 80% = 8000)
         liquidation_threshold: u64,
-        /// Liquidation bonus for liquidators (e.g., 5% = 500)
+        // Liquidation bonus for liquidators (e.g., 5% = 500)
         liquidation_bonus: u64,
-        /// Minimum collateral amount required
+        // Minimum collateral amount required
         min_collateral: u64,
-        /// Whether this asset can be used as collateral
+        // Whether this asset can be used as collateral
         is_active: bool,
-        /// Approved oracle to prevent manipulation
+        // Approved oracle to prevent manipulation
         approved_oracle: address,
-        /// Approved debt pool
+        // Approved debt pool
         approved_debt_pool: address,
     }
 
@@ -113,16 +112,16 @@ module aegis_addr::collateral {
 
     // === Constants ===
     
-    /// Basis points for percentage calculations (10000 = 100%)
+    // Basis points for percentage calculations (10000 = 100%)
     const BASIS_POINTS: u64 = 10000;
-    /// Minimum health factor to avoid liquidation (1.1 = 11000)
+    // Minimum health factor to avoid liquidation (1.1 = 11000)
     const MIN_HEALTH_FACTOR: u64 = 11000;
-    /// Precision for calculations
+    // Precision for calculations
     const PRECISION: u64 = 100000000; // 8 decimals
 
     // === Admin Functions ===
 
-    /// Initialize collateral configuration for an asset type
+    // Initialize collateral configuration for an asset type
     public entry fun init_collateral_config<Currency>(
         admin: &signer,
         ltv_ratio: u64,
@@ -155,7 +154,7 @@ module aegis_addr::collateral {
         move_to(admin, config);
     }
 
-    /// Update collateral configuration (admin only)
+    // Update collateral configuration (admin only)
     public entry fun update_collateral_config<Currency>(
         admin: &signer,
         config_address: address,
@@ -169,7 +168,7 @@ module aegis_addr::collateral {
 
     // === User Functions ===
 
-    /// Initialize user's collateral account
+    // Initialize user's collateral account
     public entry fun init_collateral_account(user: &signer) {
         let user_addr = signer::address_of(user);
         let account = CollateralAccount {
@@ -178,7 +177,7 @@ module aegis_addr::collateral {
         move_to(user, account);
     }
 
-    /// Deposit collateral for a specific currency type
+    // Deposit collateral for a specific currency type
     public entry fun deposit_collateral<Currency>(
         user: &signer,
         config_address: address,
@@ -244,7 +243,7 @@ module aegis_addr::collateral {
         });
     }
 
-    /// Withdraw collateral (only if health factor remains safe)
+    // Withdraw collateral (only if health factor remains safe)
     public entry fun withdraw_collateral<Currency>(
         user: &signer,
         config_address: address,
@@ -295,7 +294,7 @@ module aegis_addr::collateral {
 
     // === View Functions ===
 
-    /// Get collateral amount for a user
+    // Get collateral amount for a user
     #[view]
     public fun get_collateral_amount<Currency>(user_address: address): u64 acquires CollateralPosition {
         if (!exists<CollateralPosition<Currency>>(user_address)) {
@@ -305,14 +304,14 @@ module aegis_addr::collateral {
         position.amount
     }
 
-    /// Calculate health factor for a position (simplified version)
+    // Calculate health factor for a position (simplified version)
     #[view]
     public fun calculate_health_factor_single<Currency>(
         collateral_amount: u64,
         config_address: address,
         oracle_address: address,
-        debt_pool_address: address,  // Pass this as parameter for now
-        user_address: address,
+        _debt_pool_address: address,  // Pass this as parameter for now
+        _user_address: address,
     ): u64 acquires CollateralConfig {
         if (collateral_amount == 0) {
             return 0
@@ -335,7 +334,7 @@ module aegis_addr::collateral {
         (liquidation_value * PRECISION) / debt_value_usdt
     }
 
-    /// Check if position is liquidatable
+    // Check if position is liquidatable
     #[view]
     public fun is_liquidatable<Currency>(
         user_address: address,

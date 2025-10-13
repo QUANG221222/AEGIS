@@ -7,7 +7,7 @@ module aegis_addr::interest_repayment {
     use aegis_addr::pool;
     use aegis_addr::constants;
 
-    /// Borrow account by Currency
+    // Borrow account by Currency
     struct BorrowAccount<phantom Currency> has key {
         borrowed_amount: u64,
         accrued_interest: u64, // interest accrued but NOT YET paid
@@ -15,7 +15,7 @@ module aegis_addr::interest_repayment {
         last_update: u64,
     }
 
-    /// Event: borrower pays interest
+    // Event: borrower pays interest
     #[event]
     struct InterestRepayEvent has drop, store {
         borrower: address,
@@ -23,7 +23,7 @@ module aegis_addr::interest_repayment {
         timestamp: u64,
     }
 
-    /// Initialize BorrowAccount for user (when starting to borrow)
+    // Initialize BorrowAccount for user (when starting to borrow)
     public entry fun init_borrow_account<Currency>(
         borrower: &signer,
         borrowed_amount: u64,
@@ -38,14 +38,14 @@ module aegis_addr::interest_repayment {
         });
     }
 
-    /// Calculate accrued interest since last update (calculate only, don't record to pool)
+    // Calculate accrued interest since last update (calculate only, don't record to pool)
     public fun calculate_interest_due<Currency>(acc: &BorrowAccount<Currency>): u64 {
         let now = timestamp::now_seconds();
         let elapsed = now - acc.last_update;
         (acc.borrowed_amount * acc.interest_rate * elapsed) / constants::get_seconds_in_year()
     }
 
-    /// Add accrued interest to borrower's accrued_interest (periodically)
+    // Add accrued interest to borrower's accrued_interest (periodically)
     public entry fun auto_collect_interest<Currency>(
         borrower_addr: address
     ) acquires BorrowAccount {
@@ -57,7 +57,7 @@ module aegis_addr::interest_repayment {
         // pool.total_interest will only increase when actual payment is made
     }
 
-    /// Borrower pays interest -> money flows to pool wallet + increases interest fund (total_interest)
+    // Borrower pays interest -> money flows to pool wallet + increases interest fund (total_interest)
     public entry fun repay_interest<Currency>(
         borrower: &signer,
         pool_address: address,
@@ -88,7 +88,7 @@ module aegis_addr::interest_repayment {
         });
     }
 
-    /// View unpaid interest of borrower
+    // View unpaid interest of borrower
     #[view]
     public fun get_interest_debt<Currency>(borrower_addr: address): u64 acquires BorrowAccount {
         let acc = borrow_global<BorrowAccount<Currency>>(borrower_addr);

@@ -1,18 +1,18 @@
 module aegis_addr::interest_payment {
-    use std::signer;
+    // use std::signer;
     use std::timestamp;
     use std::error;
     use std::coin;
     use cedra_framework::event;
 
     use aegis_addr::pool;
-    use aegis_addr::constants;
+    // use aegis_addr::constants;
 
     const E_ZERO_AMOUNT: u64 = 1;
     const E_POOL_INSUFFICIENT: u64 = 2;
     const SCALE_PPM: u64 = 1_000_000; // parts-per-million
 
-    /// Lender account by Currency
+    // Lender account by Currency
     struct LenderAccount<phantom Currency> has key {
         deposited_amount: u64,
         accrued_interest: u64, // interest accrued ready to claim
@@ -20,7 +20,7 @@ module aegis_addr::interest_payment {
         last_update: u64,
     }
 
-    /// Event: lender claims interest
+    // Event: lender claims interest
     #[event]
     struct InterestClaimedEvent has drop, store {
         lender: address,
@@ -28,7 +28,7 @@ module aegis_addr::interest_payment {
         timestamp: u64,
     }
 
-    /// Event: credit interest to 1 lender from pool fund (no coin withdrawal)
+    // Event: credit interest to 1 lender from pool fund (no coin withdrawal)
     #[event]
     struct InterestDistributedEvent has drop, store {
         pool: address,
@@ -37,7 +37,7 @@ module aegis_addr::interest_payment {
         timestamp: u64,
     }
 
-    /// Initialize LenderAccount (on first deposit)
+    // Initialize LenderAccount (on first deposit)
     public entry fun init_lender_account<Currency>(
         lender: &signer,
         deposited_amount: u64,
@@ -52,14 +52,14 @@ module aegis_addr::interest_payment {
         });
     }
 
-    /// (Optional) Update last_update of pool; no change to interest fund
+    // (Optional) Update last_update of pool; no change to interest fund
     public entry fun accrue_interest<Currency>(pool_address: address) {
         let now = timestamp::now_seconds();
         pool::update_last_update<Currency>(pool_address, now);
     }
 
-    /// Credit interest to 1 lender based on pool_share from interest fund (total_interest)
-    /// No coin withdrawal, just add to lender.accrued_interest
+    // Credit interest to 1 lender based on pool_share from interest fund (total_interest)
+    // No coin withdrawal, just add to lender.accrued_interest
     public fun distribute_interest<Currency>(
         lender_addr: address,
         pool_address: address
@@ -95,8 +95,8 @@ module aegis_addr::interest_payment {
         // pool.total_interest will decrease when lender claims (actual coin payment).
     }
 
-    /// Lender claims interest: pool owner (signer) pays coin from pool wallet to lender
-    /// REQUIREMENT: `pool_signer` is the correct address equal to pool.address
+    // Lender claims interest: pool owner (signer) pays coin from pool wallet to lender
+    // REQUIREMENT: `pool_signer` is the correct address equal to pool.address
     public entry fun claim_interest<Currency>(
         pool_signer: &signer,
         lender_addr: address,
@@ -127,7 +127,7 @@ module aegis_addr::interest_payment {
         });
     }
 
-    /// View unclaimed interest of lender
+    // View unclaimed interest of lender
     #[view]
     public fun get_pending_interest<Currency>(lender_addr: address): u64 acquires LenderAccount {
         let acc = borrow_global<LenderAccount<Currency>>(lender_addr);

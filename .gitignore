@@ -1,2 +1,5 @@
 .cedra/
 build/
+/Backend
+.gitignore
+index.html

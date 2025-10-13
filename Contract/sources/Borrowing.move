@@ -1,18 +1,17 @@
-/// Borrowing Module
-///
-/// This module handles the borrowing functionality of the lending protocol.
-/// It allows users to borrow tokens from the pool, tracks borrowed amounts,
-/// and enforces borrowing limits.
+// Borrowing Module
+//
+// This module handles the borrowing functionality of the lending protocol.
+// It allows users to borrow tokens from the pool, tracks borrowed amounts,
+// and enforces borrowing limits.
 
 module aegis_addr::borrowing {
     use std::error;
     use std::signer;
     use cedra_framework::event;
     use aegis_addr::pool;
-    use aegis_addr::lending;
 
     // === Events ===
-    /// Event emitted when tokens are borrowed from a pool
+    // Event emitted when tokens are borrowed from a pool
     #[event]
     struct BorrowEvent has drop, store {
         pool_address: address,
@@ -22,19 +21,19 @@ module aegis_addr::borrowing {
     }
 
     // Error codes
-    /// Pool does not exist
+    // Pool does not exist
     const E_POOL_NOT_EXISTS: u64 = 1;
     
-    /// Insufficient available balance for borrowing
+    // Insufficient available balance for borrowing
     const E_INSUFFICIENT_BALANCE: u64 = 2;
     
-    /// Cannot borrow zero amount
+    // Cannot borrow zero amount
     const E_ZERO_AMOUNT: u64 = 3;
 
     // === Borrow Functions ===
 
-    /// Borrow amount from an existing pool
-    /// Updates the pool's total_borrowed (simulates token transfer)
+    // Borrow amount from an existing pool
+    // Updates the pool's total_borrowed (simulates token transfer)
     public entry fun borrow<Currency>(
         borrower: &signer,
         pool_address: address,
