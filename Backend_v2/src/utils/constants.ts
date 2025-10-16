@@ -1,4 +1,4 @@
-import { env } from "../config/environment";
+import { env } from "../configs/environment";
 /**
  * Constants for Aegis Backend
  */
@@ -63,3 +63,10 @@ export const SYMBOLS_COINBASE = {
   DOT: "DOT-USDT",
   LINK: "LINK-USDT",
 } as const;
+
+export const WHITELIST_DOMAINS = [""];
+
+export const WEBSITE_DOMAIN =
+  env.NODE_ENV === "production"
+    ? env.WEBSITE_DOMAIN_PRODUCTION
+    : env.WEBSITE_DOMAIN_DEVELOPMENT;
