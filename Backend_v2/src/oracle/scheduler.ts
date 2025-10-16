@@ -1,9 +1,9 @@
 import cron from "node-cron";
-// import { updateOracle } from "./updater";
+import { updateAllOracleCurrencies } from "./updater";
 
-// Chạy mỗi phút (*/1 * * * * = every 1 minute)
-cron.schedule("*/1 * * * *", async () => {
+// Chạy mỗi 30 giây (*/30 * * * * = every 30 seconds)
+cron.schedule("*/30 * * * * *", async () => {
   console.log(`[${new Date().toISOString()}] Running Oracle update...`);
-  //   await updateOracle();
+  await updateAllOracleCurrencies();
 });
-console.log("🔁 Oracle scheduler started — updating every 1 minute");
+console.log("🔁 Oracle scheduler started — updating every 30 seconds");

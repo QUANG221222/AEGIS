@@ -1,11 +1,24 @@
-import { TYPE_ARGS } from "../utils/constants";
+import { TYPE_ARGS, CURRENCIES } from "../utils/constants";
 import { getCleanPriceForCurrency } from "./priceFeed";
+import { checkOracleExists, initOracleForCurrency } from "./init";
 import { cedra, account, ORACLE_ADDRESS } from "../utils/cedraClient";
 
 export async function updateOracleForCurrency(currency: string) {
   try {
     const price = await getCleanPriceForCurrency(currency);
     console.log(`🔄 Fetched ${currency} price: $${price}`);
+
+    try {
+      const exists = await checkOracleExists(currency);
+      if (!exists) {
+        console.log(`Oracle for ${currency} does not exist. Initializing...`);
+        await initOracleForCurrency(currency);
+      } else {
+        console.log(`Oracle for ${currency} exists. Proceeding to update...`);
+      }
+    } catch (error) {
+      console.error("Error checking Oracle existence:", error);
+    }
 
     // Send transaction to update oracle prices
     const transaction = await cedra.transaction.build.simple({
@@ -15,7 +28,7 @@ export async function updateOracleForCurrency(currency: string) {
           `${ORACLE_ADDRESS}::oracle::update_price` as `${string}::${string}::${string}`,
         typeArguments: [TYPE_ARGS[currency as keyof typeof TYPE_ARGS]],
         functionArguments: [
-          Math.floor(price * 1e8), // Change to integer with 8 decimals
+          Math.floor(price * 1e6), // Change to integer with 6 decimals
         ],
       },
     });
@@ -38,4 +51,19 @@ export async function updateOracleForCurrency(currency: string) {
     }
     throw error;
   }
+}
+
+export async function updateOracleForManyCurrency(currencies: string[]) {
+  for (const currency of currencies) {
+    try {
+      await updateOracleForCurrency(currency);
+    } catch (error) {
+      console.error(`❌ Failed to update oracle for ${currency}:`, error);
+    }
+  }
+}
+
+export async function updateAllOracleCurrencies() {
+  const currencies = Object.keys(CURRENCIES);
+  await updateOracleForManyCurrency(currencies);
 }
