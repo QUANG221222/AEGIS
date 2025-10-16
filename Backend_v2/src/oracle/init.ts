@@ -2,7 +2,6 @@
  * Initialization for Oracle Module
  * Sets up necessary configurations and connections
  */
-import { g } from "@cedra-labs/ts-sdk/dist/common/accountAddress-BAdPmRqc";
 import { cedra, account, ORACLE_ADDRESS } from "../utils/cedraClient";
 import { TYPE_ARGS } from "../utils/constants";
 import { getCleanPriceForCurrency } from "./priceFeed";
@@ -34,6 +33,24 @@ export async function initOracleForCurrency(currency: string): Promise<void> {
     console.log("=================================");
   } catch (error) {
     console.error("Error initializing Oracle:", error);
+    throw error;
+  }
+}
+
+export async function checkOracleExists(currency: string): Promise<boolean> {
+  try {
+    // Call a view function or query the resource to check if the oracle exists
+    const result = await cedra.view({
+      payload: {
+        function: `${ORACLE_ADDRESS}::oracle::price_exists`,
+        typeArguments: [TYPE_ARGS[currency as keyof typeof TYPE_ARGS]],
+        functionArguments: [account.accountAddress],
+      },
+    });
+    // Assuming the view returns [boolean]
+    return result[0] as boolean;
+  } catch (error) {
+    console.error("Error checking Oracle existence:", error);
     throw error;
   }
 }

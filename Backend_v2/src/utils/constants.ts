@@ -17,6 +17,20 @@ export const TYPE_ARGS = {
   LINK: `${env.ORACLE_ADDRESS}::coins::LINK`,
 } as const;
 
+export const CURRENCIES = {
+  // CEDRA: "CEDRA",
+  ETH: "ETH",
+  BTC: "BTC",
+  APT: "APT",
+  // USDC: "USDC",
+  // USDT: "USDT",
+  BNB: "BNB",
+  SOL: "SOL",
+  ADA: "ADA",
+  DOT: "DOT",
+  LINK: "LINK",
+} as const;
+
 // Oracle Price API Endpoints
 export const PRICE_API_ENDPOINTS = {
   BINANCE: "https://api.binance.com/api/v3/ticker/price",
