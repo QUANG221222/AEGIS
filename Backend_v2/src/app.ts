@@ -1,15 +1,26 @@
 import express from "express";
-import { env } from "./config/environment";
+import { env } from "./configs/environment";
+import { APIs_V1 } from "./routes/v1/index.routes";
 import {
   getCleanPriceForCurrency,
   getPriceInBinance,
   getPriceInCoinGecko,
   getPriceInCoinbase,
 } from "./oracle/priceFeed";
+import { cedra } from "./utils/cedraClient";
+import { errorHandlingMiddleware } from "./middlewares/errorHandling.middleware";
+import cors from "cors";
+import { corsOptions } from "./configs/cors";
 
 const app = express();
 
 app.use(express.json());
+
+app.use(cors(corsOptions));
+
+app.use(errorHandlingMiddleware);
+
+app.use("/v1", APIs_V1);
 
 // // Tạo async function để gọi getPriceInBinance
 // async function testPrice() {

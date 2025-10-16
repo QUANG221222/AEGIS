@@ -8,4 +8,6 @@ export const env = {
   ORACLE_ADDRESS: process.env.ORACLE_ADDRESS || "",
   ORACLE_PRIVATE_KEY: process.env.ORACLE_PRIVATE_KEY || "",
   NODE_ENV: process.env.NODE_ENV || "",
+  WEBSITE_DOMAIN_PRODUCTION: process.env.WEBSITE_DOMAIN_PRODUCTION || "",
+  WEBSITE_DOMAIN_DEVELOPMENT: process.env.WEBSITE_DOMAIN_DEVELOPMENT || "",
 };
