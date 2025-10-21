@@ -2,7 +2,7 @@
  * Initialization for Oracle Module
  * Sets up necessary configurations and connections
  */
-import { cedra, account, ORACLE_ADDRESS } from "../utils/cedraClient";
+import { cedra, oracle, ORACLE_ADDRESS } from "../utils/cedraClient";
 import { TYPE_ARGS } from "../utils/constants";
 import { getCleanPriceForCurrency } from "./priceFeed";
 
@@ -12,7 +12,7 @@ export async function initOracleForCurrency(currency: string): Promise<void> {
     console.log("🔧 Initializing Oracle contract...");
 
     const transaction = await cedra.transaction.build.simple({
-      sender: account.accountAddress,
+      sender: oracle.accountAddress,
       data: {
         function:
           `${ORACLE_ADDRESS}::oracle::init_price_feed` as `${string}::${string}::${string}`,
@@ -23,7 +23,7 @@ export async function initOracleForCurrency(currency: string): Promise<void> {
 
     const pendingTransaction = await cedra.transaction.signAndSubmitTransaction(
       {
-        signer: account,
+        signer: oracle,
         transaction,
       }
     );
@@ -44,7 +44,7 @@ export async function checkOracleExists(currency: string): Promise<boolean> {
       payload: {
         function: `${ORACLE_ADDRESS}::oracle::price_exists`,
         typeArguments: [TYPE_ARGS[currency as keyof typeof TYPE_ARGS]],
-        functionArguments: [account.accountAddress],
+        functionArguments: [oracle.accountAddress],
       },
     });
     // Assuming the view returns [boolean]

@@ -1,7 +1,7 @@
 import { TYPE_ARGS, CURRENCIES } from "../utils/constants";
 import { getCleanPriceForCurrency } from "./priceFeed";
 import { checkOracleExists, initOracleForCurrency } from "./init";
-import { cedra, account, ORACLE_ADDRESS } from "../utils/cedraClient";
+import { cedra, oracle, ORACLE_ADDRESS } from "../utils/cedraClient";
 
 export async function updateOracleForCurrency(currency: string) {
   try {
@@ -22,7 +22,7 @@ export async function updateOracleForCurrency(currency: string) {
 
     // Send transaction to update oracle prices
     const transaction = await cedra.transaction.build.simple({
-      sender: account.accountAddress,
+      sender: oracle.accountAddress,
       data: {
         function:
           `${ORACLE_ADDRESS}::oracle::update_price` as `${string}::${string}::${string}`,
@@ -35,7 +35,7 @@ export async function updateOracleForCurrency(currency: string) {
 
     const pendingTransaction = await cedra.transaction.signAndSubmitTransaction(
       {
-        signer: account,
+        signer: oracle,
         transaction,
       }
     );
