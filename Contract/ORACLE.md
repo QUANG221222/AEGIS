@@ -10,7 +10,7 @@ edra move run --function-id d87d24265d5ffda4fc167d11a117a0130881c1bcd63a014c1631
 
 # View price coin in usdt
 
-cedra move view --function-id 0x48121ae8a5bb7e2875d1b7f41508f288c3f68514a3c4b4cb605024b3f8ccb36b::oracle::get_price_usdt --type-args 0x48121ae8a5bb7e2875d1b7f41508f288c3f68514a3c4b4cb605024b3f8ccb36b::coins::ETH --args address:0x48121ae8a5bb7e2875d1b7f41508f288c3f68514a3c4b4cb605024b3f8ccb36b --profile oracle
+cedra move view --function-id 0x248b6aacf27516f1ac60e145c5252cb4024650f57fe4d7b186e6db5a4e39b684::oracle::get_price_usdt --type-args 0x248b6aacf27516f1ac60e145c5252cb4024650f57fe4d7b186e6db5a4e39b684::coins::ETH --args address:0x248b6aacf27516f1ac60e145c5252cb4024650f57fe4d7b186e6db5a4e39b684 --profile oracle
 
 # Check exist price
 

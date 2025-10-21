@@ -18,7 +18,7 @@ export const TYPE_ARGS = {
 } as const;
 
 export const CURRENCIES = {
-  // CEDRA: "CEDRA",
+  CEDRA: "CEDRA",
   ETH: "ETH",
   BTC: "BTC",
   APT: "APT",
